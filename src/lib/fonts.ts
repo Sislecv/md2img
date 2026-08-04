@@ -1,24 +1,27 @@
 import type { FontFace } from "./types";
 
 // 字体清单：name 与 satori 渲染时 fontFamily 对应
+// 路径基于 vite BASE_URL（部署到子路径时自动正确解析）
+const fontUrl = (p: string) => `${import.meta.env.BASE_URL}fonts/${p}`;
+
 const FONT_FACES: FontFace[] = [
-  { name: "Noto Sans SC", weight: 400, style: "normal", url: "/fonts/NotoSansSC-Regular.woff" },
-  { name: "Noto Sans SC", weight: 700, style: "normal", url: "/fonts/NotoSansSC-Bold.woff" },
-  { name: "Noto Serif SC", weight: 400, style: "normal", url: "/fonts/NotoSerifSC-Regular.woff" },
-  { name: "Noto Serif SC", weight: 700, style: "normal", url: "/fonts/NotoSerifSC-Bold.woff" },
-  { name: "LXGW WenKai", weight: 400, style: "normal", url: "/fonts/LXGWWenKai-Regular.woff" },
-  { name: "Smiley Sans", weight: 400, style: "normal", url: "/fonts/SmileySans-Oblique.woff" },
-  { name: "JetBrains Mono", weight: 400, style: "normal", url: "/fonts/JetBrainsMono-Regular.woff" },
-  { name: "JetBrains Mono", weight: 700, style: "normal", url: "/fonts/JetBrainsMono-Bold.woff" },
-  { name: "Inter", weight: 400, style: "normal", url: "/fonts/Inter-Regular.woff" },
-  { name: "Inter", weight: 600, style: "normal", url: "/fonts/Inter-SemiBold.woff" },
-  { name: "Inter", weight: 700, style: "normal", url: "/fonts/Inter-Bold.woff" },
-  { name: "Playfair Display", weight: 400, style: "normal", url: "/fonts/PlayfairDisplay-400.woff" },
-  { name: "Playfair Display", weight: 600, style: "normal", url: "/fonts/PlayfairDisplay-600.woff" },
-  { name: "Playfair Display", weight: 700, style: "normal", url: "/fonts/PlayfairDisplay-700.woff" },
+  { name: "Noto Sans SC", weight: 400, style: "normal", url: fontUrl("NotoSansSC-Regular.woff") },
+  { name: "Noto Sans SC", weight: 700, style: "normal", url: fontUrl("NotoSansSC-Bold.woff") },
+  { name: "Noto Serif SC", weight: 400, style: "normal", url: fontUrl("NotoSerifSC-Regular.woff") },
+  { name: "Noto Serif SC", weight: 700, style: "normal", url: fontUrl("NotoSerifSC-Bold.woff") },
+  { name: "LXGW WenKai", weight: 400, style: "normal", url: fontUrl("LXGWWenKai-Regular.woff") },
+  { name: "Smiley Sans", weight: 400, style: "normal", url: fontUrl("SmileySans-Oblique.woff") },
+  { name: "JetBrains Mono", weight: 400, style: "normal", url: fontUrl("JetBrainsMono-Regular.woff") },
+  { name: "JetBrains Mono", weight: 700, style: "normal", url: fontUrl("JetBrainsMono-Bold.woff") },
+  { name: "Inter", weight: 400, style: "normal", url: fontUrl("Inter-Regular.woff") },
+  { name: "Inter", weight: 600, style: "normal", url: fontUrl("Inter-SemiBold.woff") },
+  { name: "Inter", weight: 700, style: "normal", url: fontUrl("Inter-Bold.woff") },
+  { name: "Playfair Display", weight: 400, style: "normal", url: fontUrl("PlayfairDisplay-400.woff") },
+  { name: "Playfair Display", weight: 600, style: "normal", url: fontUrl("PlayfairDisplay-600.woff") },
+  { name: "Playfair Display", weight: 700, style: "normal", url: fontUrl("PlayfairDisplay-700.woff") },
   // Fusion Pixel（像素字体）：latin 在前处理西文，zh_hans 兜底中文（单字重，无 bold）
-  { name: "Fusion Pixel", weight: 400, style: "normal", url: "/fonts/FusionPixel-latin.woff" },
-  { name: "Fusion Pixel", weight: 400, style: "normal", url: "/fonts/FusionPixel-zh-Hans.woff" },
+  { name: "Fusion Pixel", weight: 400, style: "normal", url: fontUrl("FusionPixel-latin.woff") },
+  { name: "Fusion Pixel", weight: 400, style: "normal", url: fontUrl("FusionPixel-zh-Hans.woff") },
 ];
 
 // satori 需要的字体名子集（页面渲染时按需预加载）
