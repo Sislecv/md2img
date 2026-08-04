@@ -4,8 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // 相对路径：兼容 GitHub Pages 子路径部署
-  base: "./",
+  // GitHub Pages 子路径部署（Sislecv/md2img）
+  base: "/md2img/",
   define: {
     // satori 0.24 依赖的 Node 全局，浏览器需 polyfill
     "process.env.NODE_ENV": JSON.stringify("development"),
