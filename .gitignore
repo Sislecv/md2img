@@ -4,3 +4,4 @@ dist/
 .DS_Store
 # 字体源文件（体积大，不进仓库；子集化后的 woff 在 public/fonts 保留）
 scripts/fonts-src/
+tsconfig.tsbuildinfo
