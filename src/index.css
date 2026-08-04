@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 暗色调色板：暖调炭黑（避免 slate 蓝灰的“AI 味”）
+   —— 背景偏棕、面板偏暖灰、文字暖白、边框低饱和 */
+@theme {
+  --color-night-bg: #171512; /* 应用底色：暖炭黑 */
+  --color-night-panel: #1f1c18; /* 面板/卡片表面 */
+  --color-night-raised: #26221d; /* 抬升层：输入框、hover */
+  --color-night-border: #36312a; /* 边框 */
+  --color-night-border-soft: #2a2621; /* 细分隔线 */
+  --color-night-text: #ece7de; /* 主文字：暖白 */
+  --color-night-text-dim: #a49d91; /* 次级文字 */
+  --color-night-text-faint: #6f6960; /* 弱化文字/placeholder */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    "Inter",
+    "Noto Sans SC",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
