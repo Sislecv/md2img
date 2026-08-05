@@ -177,6 +177,8 @@ async function ensureBrowserFontsLoaded(): Promise<void> {
 
 // ---------- Markdown 图片预取 ----------
 const IMG_URL_RE = /(!\[[^\]]*\]\(\s*)(https?:\/\/[^)\s]+)(\s*\))/g;
+// 言论卡片头像（`> ![..]`）：压缩到小尺寸，避免巨型 path 干扰后续布局
+const AVATAR_URL_RE = /(>\s*!\[[^\]]*\]\(\s*)(https?:\/\/[^)\s]+)(\s*\))/g;
 
 export interface PrefetchedImages {
   /** 预取后的 markdown（远程 URL 替换为 data URL） */
@@ -185,10 +187,41 @@ export interface PrefetchedImages {
   sizes: Map<string, { w: number; h: number }>;
 }
 
-/** 扫描 markdown 中所有远程图片 URL，fetch 为 data URL 并读取原始尺寸。
- *  satori 无法加载远程图片且需要显式宽高。失败/非远程则原样保留。 */
+/** 扫描 markdown 中所有远程图片 URL，fetch 为 data URL、压缩尺寸并读取原始尺寸。
+ *  satori 无法加载远程图片且需要显式宽高；过大图片会被 satori 转成巨型 path，
+ *  干扰后续元素布局（导致段落爆炸/溢出），故预取时按用途压缩：
+ *  言论卡片头像缩到 96px（渲染 44px），普通图片缩到 800px。 */
+const MAX_BODY_W = 800;
+const MAX_AVATAR_W = 96;
+
+async function compressToDataUrl(blob: Blob, maxW: number): Promise<string> {
+  const raw = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("read fail"));
+    reader.readAsDataURL(blob);
+  });
+  const img = new Image();
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("decode fail"));
+    img.src = raw;
+  });
+  const w = img.naturalWidth || maxW;
+  const h = img.naturalHeight || maxW;
+  const scale = Math.min(1, maxW / Math.max(1, w));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return raw;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
 export async function prefetchImages(markdown: string): Promise<PrefetchedImages> {
   const urls = [...markdown.matchAll(IMG_URL_RE)].map((m) => m[2]);
+  const avatarUrls = new Set([...markdown.matchAll(AVATAR_URL_RE)].map((m) => m[2]));
   const uniq = [...new Set(urls)];
   const sizes = new Map<string, { w: number; h: number }>();
   if (uniq.length === 0) return { markdown, sizes };
@@ -199,13 +232,9 @@ export async function prefetchImages(markdown: string): Promise<PrefetchedImages
         const res = await fetch(url);
         if (!res.ok) return { url, data: url };
         const blob = await res.blob();
-        const data = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(new Error("read fail"));
-          reader.readAsDataURL(blob);
-        });
-        // 读取图片原始尺寸（data URL 可直接加载）
+        const maxW = avatarUrls.has(url) ? MAX_AVATAR_W : MAX_BODY_W;
+        const data = await compressToDataUrl(blob, maxW);
+        // 读取压缩后图片的原始尺寸
         try {
           const dim = await new Promise<{ w: number; h: number }>((resolve, reject) => {
             const img = new Image();
@@ -239,10 +268,10 @@ export async function prefetchImages(markdown: string): Promise<PrefetchedImages
 // ---------- satori SVG 渲染 ----------
 export async function renderPosterSvg(props: PosterProps, height?: number): Promise<string> {
   const fonts = await loadAllFonts();
-  const finalHeight = height ?? props.size.minHeight;
-  const svg = await satori(buildPosterTree(props, finalHeight), {
+  let finalHeight = height ?? props.size.minHeight;
+  const satoriOpts = (h: number) => ({
     width: props.size.width,
-    height: finalHeight,
+    height: h,
     fonts: fonts.map((f) => ({
       name: f.name,
       weight: f.weight as 400 | 700 | 600,
@@ -250,5 +279,38 @@ export async function renderPosterSvg(props: PosterProps, height?: number): Prom
       data: f.data,
     })),
   });
+  let svg = await satori(buildPosterTree(props, finalHeight), satoriOpts(finalHeight));
+  // satori 浏览器端对某些块（图片/引用后内容）布局高度会超出 DOM 测量，
+  // 渲染后检测内容是否越界，越界则放大高度重渲染一次（迭代上限 3 次）
+  for (let i = 0; i < 3; i++) {
+    const maxBottom = detectContentBottom(svg);
+    if (maxBottom <= finalHeight + 5) break;
+    finalHeight = Math.ceil(maxBottom);
+    svg = await satori(buildPosterTree(props, finalHeight), satoriOpts(finalHeight));
+  }
   return svg;
+}
+
+/** 解析 SVG，返回内容（图片/文本 path）的最大底部 y；忽略 mask 相关元素 */
+function detectContentBottom(svg: string): number {
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  let maxBottom = 0;
+  doc.querySelectorAll("image, path").forEach((el) => {
+    if (el.tagName === "image") {
+      const y = parseFloat(el.getAttribute("y") ?? "0");
+      const h = parseFloat(el.getAttribute("height") ?? "0");
+      if (!isNaN(y) && !isNaN(h)) maxBottom = Math.max(maxBottom, y + h);
+      return;
+    }
+    // path：跳过 mask 里的（父元素是 mask）与 clipPath
+    if (el.parentElement?.tagName === "mask" || el.parentElement?.tagName === "clipPath") return;
+    const d = el.getAttribute("d") ?? "";
+    // path 的 d 含多段 M，取最大 y（粗略，考虑文本基线偏移）
+    let maxY = 0;
+    const re = /M[\d.]+[ ,]([\d.]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(d))) maxY = Math.max(maxY, parseFloat(m[1]));
+    if (maxY > 0) maxBottom = Math.max(maxBottom, maxY);
+  });
+  return maxBottom;
 }

@@ -65,31 +65,32 @@ export default function Toolbar({
             </option>
           ))}
         </select>
-        {sizeId === "custom" && (
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              value={customSize.width}
-              min={CUSTOM_SIZE_LIMITS.min}
-              max={CUSTOM_SIZE_LIMITS.max}
-              onChange={(e) => onCustomSizeChange({ width: Number(e.target.value) })}
-              className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-night-border dark:bg-night-raised dark:text-night-text"
-              aria-label="自定义宽度"
-            />
-            <span className="text-xs text-slate-400">×</span>
-            <input
-              type="number"
-              value={customSize.height}
-              min={CUSTOM_SIZE_LIMITS.min}
-              max={CUSTOM_SIZE_LIMITS.max}
-              onChange={(e) => onCustomSizeChange({ height: Number(e.target.value) })}
-              className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-night-border dark:bg-night-raised dark:text-night-text"
-              aria-label="自定义高度"
-            />
-            <span className="text-xs text-slate-400">px</span>
-          </div>
-        )}
       </div>
+      {sizeId === "custom" && (
+        <div className="flex w-full basis-full items-center gap-1 sm:w-auto sm:basis-auto">
+          <span className="text-xs text-slate-400 sm:hidden">自定义：</span>
+          <input
+            type="number"
+            value={customSize.width}
+            min={CUSTOM_SIZE_LIMITS.min}
+            max={CUSTOM_SIZE_LIMITS.max}
+            onChange={(e) => onCustomSizeChange({ width: Number(e.target.value) })}
+            className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-night-border dark:bg-night-raised dark:text-night-text"
+            aria-label="自定义宽度"
+          />
+          <span className="text-xs text-slate-400">×</span>
+          <input
+            type="number"
+            value={customSize.height}
+            min={CUSTOM_SIZE_LIMITS.min}
+            max={CUSTOM_SIZE_LIMITS.max}
+            onChange={(e) => onCustomSizeChange({ height: Number(e.target.value) })}
+            className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-night-border dark:bg-night-raised dark:text-night-text"
+            aria-label="自定义高度"
+          />
+          <span className="text-xs text-slate-400">px</span>
+        </div>
+      )}
 
       <button
         onClick={onOpenBrand}

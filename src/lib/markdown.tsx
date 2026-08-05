@@ -267,16 +267,11 @@ function renderBlocks(tokens: Token[], ctx: BlockCtx): React.ReactNode[] {
               const n = listCtx.orderedCounters[listCtx.orderedCounters.length - 1];
               listCtx.orderedCounters[listCtx.orderedCounters.length - 1] = n + 1;
               return (
-                <li key={`${key}-li-${idx}`} style={{ marginBottom: 12, lineHeight: s.lineHeight }}>
-                  <span
-                    style={{
-                      color: s.accent,
-                      fontFamily: `"${s.fontMono}"`,
-                      fontSize: s.fontSize.body,
-                    }}
-                  >
-                    {n}. {renderBlocks(item, ctx)}
-                  </span>
+                <li key={`${key}-li-${idx}`} style={{ display: "flex", marginBottom: 12, lineHeight: s.lineHeight }}>
+                  <span style={{ color: s.accent, marginRight: 14, fontSize: s.fontSize.body, lineHeight: 1 }}>{n}.</span>
+                  <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, fontSize: s.fontSize.body, color: s.text, fontFamily: `"${s.fontBody}"` }}>
+                    {renderBlocks(item, ctx)}
+                  </div>
                 </li>
               );
             })}
@@ -284,17 +279,11 @@ function renderBlocks(tokens: Token[], ctx: BlockCtx): React.ReactNode[] {
         ) : (
           <ul key={key} style={{ margin: "0 0 20px 0", padding: 0 }}>
             {items.map((item, idx) => (
-              <li key={`${key}-li-${idx}`} style={{ marginBottom: 12, lineHeight: s.lineHeight }}>
-                <span
-                  style={{
-                    color: s.text,
-                    fontSize: s.fontSize.body,
-                    fontFamily: `"${s.fontBody}"`,
-                  }}
-                >
-                  <span style={{ color: s.accent, marginRight: 8 }}>•</span>
+              <li key={`${key}-li-${idx}`} style={{ display: "flex", marginBottom: 12, lineHeight: s.lineHeight }}>
+                <span style={{ color: s.accent, marginRight: 14, fontSize: s.fontSize.body, lineHeight: 1 }}>•</span>
+                <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, fontSize: s.fontSize.body, color: s.text, fontFamily: `"${s.fontBody}"` }}>
                   {renderBlocks(item, ctx)}
-                </span>
+                </div>
               </li>
             ))}
           </ul>
@@ -434,7 +423,7 @@ function renderQuoteCard(card: QuoteCard, ctx: BlockCtx, key: string): React.Rea
   const s = ctx.theme;
   const initial = card.nickname.slice(0, 1);
   return (
-    <blockquote
+    <div
       key={key}
       style={{
         display: "flex",
@@ -447,7 +436,8 @@ function renderQuoteCard(card: QuoteCard, ctx: BlockCtx, key: string): React.Rea
       }}
     >      {/* 头像 + 昵称行 */}
       <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-        {card.avatar ? (
+        {/* 头像仅当预取成功（data URL）或本地路径时渲染；远程 http 说明预取失败 → 首字占位 */}
+        {card.avatar && !/^https?:\/\//i.test(card.avatar) ? (
           <img
             src={card.avatar}
             width={44}
@@ -519,7 +509,7 @@ function renderQuoteCard(card: QuoteCard, ctx: BlockCtx, key: string): React.Rea
         </span>
         {formatCjkText(card.content)}
       </div>
-    </blockquote>
+    </div>
   );
 }
 
