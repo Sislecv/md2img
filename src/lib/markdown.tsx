@@ -359,6 +359,99 @@ function renderBlocks(tokens: Token[], ctx: BlockCtx): React.ReactNode[] {
         out.push(<div key={key} style={{ borderTop: `1px solid ${s.hr}`, margin: "28px 0" }} />);
         break;
       }
+      case "table_open": {
+        // 解析表格：thead 表头 + tbody 行
+        const rows: { cells: React.ReactNode[]; header: boolean }[] = [];
+        let j = i + 1;
+        let depth = 1;
+        let inHeader = false;
+        let guard = 0;
+        while (j < tokens.length && depth > 0 && guard++ < 1000) {
+          const t = tokens[j];
+          if (t.type === "table_open") depth++;
+          else if (t.type === "table_close") {
+            depth--;
+            if (depth === 0) break;
+          } else if (t.type === "thead_open") {
+            inHeader = true;
+            j++;
+          } else if (t.type === "tbody_open") {
+            inHeader = false;
+            j++;
+          } else if (t.type === "tr_open") {
+            const cells: React.ReactNode[] = [];
+            let m = j + 1;
+            let cguard = 0;
+            while (m < tokens.length && tokens[m].type !== "tr_close" && cguard++ < 500) {
+              const c = tokens[m];
+              if (c.type === "th_open" || c.type === "td_open") {
+                const isTh = c.type === "th_open";
+                const inline = tokens[m + 1];
+                if (inline && inline.type === "inline") {
+                  cells.push(
+                    <div
+                      key={`cell-${m}`}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: 1,
+                        minWidth: 0,
+                        padding: "10px 14px",
+                        fontSize: isTh ? s.fontSize.quote - 2 : s.fontSize.body - 4,
+                        fontWeight: isTh ? 700 : 400,
+                        color: isTh ? s.heading : s.text,
+                        fontFamily: `"${s.fontBody}"`,
+                        lineHeight: 1.5,
+                        backgroundColor: isTh
+                          ? hexToRgba(ctx.accent, ctx.theme.isDark ? 0.12 : 0.07)
+                          : "transparent",
+                        borderRight: `1px solid ${s.codeBlockBorder}`,
+                      }}
+                    >
+                      {renderInline(inlineChildren(inline), ctx, `tbl-${m}`)}
+                    </div>
+                  );
+                }
+                m += 3; // 跳过 th_open/inline/th_close
+              } else {
+                m++;
+              }
+            }
+            rows.push({ cells, header: inHeader });
+            j = m + 1; // 跳过 tr_close
+          } else {
+            j++;
+          }
+        }
+        out.push(
+          <div
+            key={key}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              border: `1px solid ${s.codeBlockBorder}`,
+              borderRadius: 10,
+              overflow: "hidden",
+              margin: "0 0 20px 0",
+            }}
+          >
+            {rows.map((row, ri) => (
+              <div
+                key={`row-${ri}`}
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  borderBottom: ri < rows.length - 1 ? `1px solid ${s.codeBlockBorder}` : "none",
+                }}
+              >
+                {row.cells}
+              </div>
+            ))}
+          </div>
+        );
+        i = j;
+        break;
+      }
       default:
         break;
     }
