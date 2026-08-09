@@ -132,6 +132,25 @@ interface BlockCtx extends RenderCtx {
   orderedCounters: number[];
 }
 
+/** 列表项内容：取首个段落 inline 渲染为行内节点（无 p 包裹、无 flex li，
+ *  避免 satori 对 flex 列表项的布局 bug）；含嵌套块时回退块级渲染 */
+function renderListItemText(item: Token[], ctx: BlockCtx, prefix: string): React.ReactNode {
+  const paraIdx = item.findIndex((t) => t.type === "paragraph_open");
+  const hasNested = item.some(
+    (t) => t.type !== "paragraph_open" && t.type !== "paragraph_close" && t.type !== "inline"
+  );
+  if (paraIdx >= 0 && paraIdx + 1 < item.length && item[paraIdx + 1].type === "inline" && !hasNested) {
+    const inline = item[paraIdx + 1];
+    return (
+      <>
+        <span style={{ color: ctx.accent, fontWeight: 700, marginRight: 8 }}>{prefix}</span>
+        {renderInline(inlineChildren(inline), ctx, "li")}
+      </>
+    );
+  }
+  return <div style={{ display: "flex", flexDirection: "column" }}>{renderBlocks(item, ctx)}</div>;
+}
+
 function renderBlocks(tokens: Token[], ctx: BlockCtx): React.ReactNode[] {
   const s = ctx.theme;
   const out: React.ReactNode[] = [];
@@ -267,11 +286,17 @@ function renderBlocks(tokens: Token[], ctx: BlockCtx): React.ReactNode[] {
               const n = listCtx.orderedCounters[listCtx.orderedCounters.length - 1];
               listCtx.orderedCounters[listCtx.orderedCounters.length - 1] = n + 1;
               return (
-                <li key={`${key}-li-${idx}`} style={{ display: "flex", marginBottom: 12, lineHeight: s.lineHeight }}>
-                  <span style={{ color: s.accent, marginRight: 14, fontSize: s.fontSize.body, lineHeight: 1 }}>{n}.</span>
-                  <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, fontSize: s.fontSize.body, color: s.text, fontFamily: `"${s.fontBody}"` }}>
-                    {renderBlocks(item, ctx)}
-                  </div>
+                <li
+                  key={`${key}-li-${idx}`}
+                  style={{
+                    marginBottom: 12,
+                    lineHeight: s.lineHeight,
+                    fontSize: s.fontSize.body,
+                    color: s.text,
+                    fontFamily: `"${s.fontBody}"`,
+                  }}
+                >
+                  {renderListItemText(item, ctx, `${n}. `)}
                 </li>
               );
             })}
@@ -279,11 +304,17 @@ function renderBlocks(tokens: Token[], ctx: BlockCtx): React.ReactNode[] {
         ) : (
           <ul key={key} style={{ margin: "0 0 20px 0", padding: 0 }}>
             {items.map((item, idx) => (
-              <li key={`${key}-li-${idx}`} style={{ display: "flex", marginBottom: 12, lineHeight: s.lineHeight }}>
-                <span style={{ color: s.accent, marginRight: 14, fontSize: s.fontSize.body, lineHeight: 1 }}>•</span>
-                <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, fontSize: s.fontSize.body, color: s.text, fontFamily: `"${s.fontBody}"` }}>
-                  {renderBlocks(item, ctx)}
-                </div>
+              <li
+                key={`${key}-li-${idx}`}
+                style={{
+                  marginBottom: 12,
+                  lineHeight: s.lineHeight,
+                  fontSize: s.fontSize.body,
+                  color: s.text,
+                  fontFamily: `"${s.fontBody}"`,
+                }}
+              >
+                {renderListItemText(item, ctx, "• ")}
               </li>
             ))}
           </ul>
