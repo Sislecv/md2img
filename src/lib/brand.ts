@@ -40,6 +40,8 @@ export const DEFAULT_BRAND: BrandSettings = {
   accentColor: "",
   footerText: "",
   showLogo: true,
+  headerTag: "",
+  showDate: false,
 };
 
 const STORAGE_KEYS = [BRAND_KEY, MARKDOWN_KEY, THEME_KEY, SIZE_KEY] as const;
@@ -53,8 +55,9 @@ export function loadBrand(): BrandSettings {
       accentColor: typeof parsed.accentColor === "string" ? parsed.accentColor : "",
       footerText: typeof parsed.footerText === "string" ? parsed.footerText : "",
       logo: typeof parsed.logo === "string" ? parsed.logo : undefined,
-      // 旧数据无该字段时默认 true（显示）
       showLogo: parsed.showLogo !== false,
+      headerTag: typeof parsed.headerTag === "string" ? parsed.headerTag : "",
+      showDate: Boolean(parsed.showDate),
     };
   } catch {
     return { ...DEFAULT_BRAND };

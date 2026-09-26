@@ -82,7 +82,7 @@ export default function BrandDrawer({ open, onClose, brand, onChange, onLogo }: 
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-night-text">主题色</label>
+          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-night-text">自定义强调色</label>
           <div className="flex items-center gap-3">
             <input
               type="color"
@@ -97,7 +97,56 @@ export default function BrandDrawer({ open, onClose, brand, onChange, onLogo }: 
               恢复主题默认
             </button>
           </div>
-          <p className="mt-2 text-xs text-slate-400">用于引用条、分隔线、footer 强调</p>
+          {/* 预设快捷色 */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            {[
+              { label: "蔚蓝", color: "#2563eb" },
+              { label: "紫霓", color: "#a855f7" },
+              { label: "潮黄", color: "#ffe600" },
+              { label: "琥珀", color: "#d97706" },
+              { label: "墨竹", color: "#1f6f50" },
+              { label: "绯红", color: "#e11d48" },
+              { label: "赛博", color: "#06b6d4" },
+              { label: "薄荷", color: "#0d9488" },
+            ].map((c) => (
+              <button
+                key={c.color}
+                title={c.label}
+                onClick={() => onChange({ accentColor: c.color })}
+                style={{ backgroundColor: c.color }}
+                className="h-6 w-6 rounded-full border border-black/10 shadow-xs transition hover:scale-110 active:scale-95"
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-slate-400">用于卡片引用条、徽标、代码块高亮及强调</p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-night-text">顶部标签 / 分类（可选）</label>
+          <input
+            value={brand.headerTag || ""}
+            onChange={(e) => onChange({ headerTag: e.target.value })}
+            placeholder="例如：TECH NOTES · 产品复盘"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-night-border dark:bg-night-raised dark:text-night-text"
+          />
+          <p className="mt-1.5 text-xs text-slate-400">显示在卡片右上角的胶囊分类标签</p>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-night-text">卡片显示当前日期</label>
+            <p className="text-xs text-slate-400">在卡片顶部或底部附带 YYYY.MM.DD</p>
+          </div>
+          <button
+            onClick={() => onChange({ showDate: !brand.showDate })}
+            role="switch"
+            aria-checked={brand.showDate}
+            className={`relative h-6 w-11 rounded-full transition ${brand.showDate ? "bg-blue-600" : "bg-slate-300"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${brand.showDate ? "left-[22px]" : "left-0.5"}`}
+            />
+          </button>
         </div>
 
         <div>
@@ -110,7 +159,7 @@ export default function BrandDrawer({ open, onClose, brand, onChange, onLogo }: 
           />
         </div>
 
-        <div className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-700">
+        <div className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
           品牌设置保存后，所有导出的图片都会自动带上 Logo、主题色与 footer，无需重复配置。
         </div>
       </aside>

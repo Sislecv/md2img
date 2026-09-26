@@ -3,42 +3,39 @@
 // 2. 连续标点压缩（全角标点相邻时保留一个）
 // 3. 标点与引号规范化
 
-const CJK = "\\u4e00-\\u9fff\\u3400-\\u4dbf\\uf900-\\ufaff";
-const CJK_PUNCT = "\\u3000-\\u303f\\uff00-\\uffef";
+// 汉字字符集（仅匹配汉字，排除中文标点，因为全角标点自带字距）
+const CJK_IDEOGRAPH = "\\u4e00-\\u9fff\\u3400-\\u4dbf\\uf900-\\ufaff";
 const LATIN = "A-Za-z";
 const DIGIT = "0-9";
 const HALF = `${LATIN}${DIGIT}`;
 
-// CJK ↔ 西文之间补窄空格
-const CJK_LATIN_RE = new RegExp(
-  `([${CJK}${CJK_PUNCT}])([${HALF}])|([${HALF}])([${CJK}${CJK_PUNCT}])`,
-  "g"
-);
+// 汉字 ↔ 西文/数字 之间补窄空格 (U+2009，约 1/4 em)
+// 采用零宽断言（lookaround），避免相邻字符被前一次匹配消耗
+const CJK_TO_HALF_RE = new RegExp(`(?<=[${CJK_IDEOGRAPH}])(?=[${HALF}])`, "g");
+const HALF_TO_CJK_RE = new RegExp(`(?<=[${HALF}])(?=[${CJK_IDEOGRAPH}])`, "g");
 
-// CJK ↔ 特殊符号（%，#，$，@ 等半角符号，但排除闭合括号）
-const CJK_SYMBOL_RE = new RegExp(
-  `([${CJK}])([%#@&+\\-×÷=<>])|([%#@&+\\-×÷=<>])([${CJK}])`,
-  "g"
-);
+// 汉字 ↔ 常用西文计算符号（%，#，@，&，+，-，=，<，>）
+const SYMBOLS = "%#@&+\\-×÷=<>";
+const CJK_TO_SYM_RE = new RegExp(`(?<=[${CJK_IDEOGRAPH}])(?=[${SYMBOLS}])`, "g");
+const SYM_TO_CJK_RE = new RegExp(`(?<=[${SYMBOLS}])(?=[${CJK_IDEOGRAPH}])`, "g");
 
-const QUOTE_PAIRS: Record<string, string> = {
-  '"': "“",
-  "'": "’",
-};
-
-// 连续全角标点压缩：同一字符连续出现 ≥2 次时只保留一个（如 "……" 由 "。。" 而来）
+// 连续全角标点压缩：同一字符连续出现 ≥2 次时只保留一个（如重复的逗号、句号）
 function compressPunctuation(s: string): string {
   return s.replace(/([，。！？；：、]){2,}/g, "$1");
 }
 
-// 中文引号规范化：半角引号夹在中文之间时转全角
+// 中文引号规范化：成对半角引号夹在中文外侧时转为标准全角引号
 function normalizeQuotes(s: string): string {
-  return s
-    .replace(/([${CJK}])\s*(["'])/g, (m, c) => c + QUOTE_PAIRS[m[m.length - 1]])
-    .replace(/(["'])\s*([${CJK}])/g, (m, q) => QUOTE_PAIRS[q] + m[m.length - 1]);
+  // 先处理双引号成对情况 "..." -> “...”
+  let res = s.replace(/"([^"]*)"/g, "“$1”");
+  // 紧贴中文的半角引号前后修补（处理单边遗漏）
+  res = res
+    .replace(new RegExp(`(["'])\\s*([${CJK_IDEOGRAPH}])`, "g"), "“$2")
+    .replace(new RegExp(`([${CJK_IDEOGRAPH}])\\s*(["'])`, "g"), "$1”");
+  return res;
 }
 
-const RE_HAS_CJK = new RegExp(`[${CJK}]`);
+const RE_HAS_CJK = new RegExp(`[${CJK_IDEOGRAPH}]`);
 
 /** 十六进制颜色转 rgba 字符串（支持 #rgb / #rrggbb / #rrggbbaa），用于荧光笔等半透明效果 */
 export function hexToRgba(hex: string, alpha: number): string {
@@ -61,15 +58,12 @@ export function hexToRgba(hex: string, alpha: number): string {
 export function formatCjkText(input: string): string {
   if (!RE_HAS_CJK.test(input)) return input;
   let s = input;
-  s = s.replace(CJK_LATIN_RE, (m, a, b, c, d) => {
-    if (a !== undefined) return `${a}\u2009${b}`;
-    return `${c}\u2009${d}`;
-  });
-  s = s.replace(CJK_SYMBOL_RE, (m, a, b, c, d) => {
-    if (a !== undefined) return `${a}\u2009${b}`;
-    return `${c}\u2009${d}`;
-  });
-  s = compressPunctuation(s);
   s = normalizeQuotes(s);
+  s = s
+    .replace(CJK_TO_HALF_RE, "\u2009")
+    .replace(HALF_TO_CJK_RE, "\u2009")
+    .replace(CJK_TO_SYM_RE, "\u2009")
+    .replace(SYM_TO_CJK_RE, "\u2009");
+  s = compressPunctuation(s);
   return s;
 }

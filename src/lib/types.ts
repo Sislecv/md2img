@@ -6,6 +6,14 @@ export interface ThemeTokens {
   background: string;
   /** 可选背景图（linear-gradient 等），设置后优先于 background；用于扫描线等特殊质感 */
   backgroundImage?: string;
+  category?: string;
+  description?: string;
+  /** 预览色块 [背景, 文字/标题, 强调色]，用于在工具栏可视化展示 */
+  previewColors: [string, string, string];
+  /** 外层卡片边框（如 1px solid rgba(...)） */
+  border?: string;
+  /** 卡片圆角（默认 0） */
+  borderRadius?: number;
   /** 主文字色 */
   text: string;
   /** 标题色 */
@@ -46,6 +54,8 @@ export interface ThemeTokens {
   };
   /** 标题字重 */
   headingWeight: 400 | 500 | 600 | 700;
+  /** 标题装饰风格: "clean" | "pill" | "bar" | "underline" | "quote" | "terminal" */
+  headingStyle?: "clean" | "pill" | "bar" | "underline" | "quote" | "terminal";
   /** 正文对齐：left | center */
   align: "left" | "center";
   /** 是否显示顶部品牌栏 */
@@ -54,6 +64,8 @@ export interface ThemeTokens {
   footerColor: string;
   /** 深色主题（用于决定半透明高亮/荧光笔的透明度与配色策略） */
   isDark: boolean;
+  /** 代码高亮配色模式 */
+  codeSyntaxTheme?: "dark" | "light" | "crt" | "aurora" | "warm";
 }
 
 export interface PosterSize {
@@ -71,6 +83,10 @@ export interface BrandSettings {
   footerText: string;
   /** 是否在卡片顶部显示图标（Logo 或默认占位） */
   showLogo: boolean;
+  /** 可选：顶部右侧分类/标签（如 "TECH NOTES"） */
+  headerTag?: string;
+  /** 是否在卡片中显示日期 */
+  showDate?: boolean;
 }
 
 export interface FontFace {

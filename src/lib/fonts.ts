@@ -10,7 +10,9 @@ const FONT_FACES: FontFace[] = [
   { name: "Noto Serif SC", weight: 400, style: "normal", url: fontUrl("NotoSerifSC-Regular.woff") },
   { name: "Noto Serif SC", weight: 700, style: "normal", url: fontUrl("NotoSerifSC-Bold.woff") },
   { name: "LXGW WenKai", weight: 400, style: "normal", url: fontUrl("LXGWWenKai-Regular.woff") },
+  { name: "LXGW WenKai", weight: 700, style: "normal", url: fontUrl("LXGWWenKai-Regular.woff") },
   { name: "Smiley Sans", weight: 400, style: "normal", url: fontUrl("SmileySans-Oblique.woff") },
+  { name: "Smiley Sans", weight: 700, style: "normal", url: fontUrl("SmileySans-Oblique.woff") },
   { name: "JetBrains Mono", weight: 400, style: "normal", url: fontUrl("JetBrainsMono-Regular.woff") },
   { name: "JetBrains Mono", weight: 700, style: "normal", url: fontUrl("JetBrainsMono-Bold.woff") },
   { name: "Inter", weight: 400, style: "normal", url: fontUrl("Inter-Regular.woff") },
@@ -19,9 +21,10 @@ const FONT_FACES: FontFace[] = [
   { name: "Playfair Display", weight: 400, style: "normal", url: fontUrl("PlayfairDisplay-400.woff") },
   { name: "Playfair Display", weight: 600, style: "normal", url: fontUrl("PlayfairDisplay-600.woff") },
   { name: "Playfair Display", weight: 700, style: "normal", url: fontUrl("PlayfairDisplay-700.woff") },
-  // Fusion Pixel（像素字体）：latin 在前处理西文，zh_hans 兜底中文（单字重，无 bold）
+  // Fusion Pixel（像素字体）：latin 在前处理西文，zh_hans 兜底中文
   { name: "Fusion Pixel", weight: 400, style: "normal", url: fontUrl("FusionPixel-latin.woff") },
   { name: "Fusion Pixel", weight: 400, style: "normal", url: fontUrl("FusionPixel-zh-Hans.woff") },
+  { name: "Fusion Pixel", weight: 700, style: "normal", url: fontUrl("FusionPixel-zh-Hans.woff") },
 ];
 
 // satori 需要的字体名子集（页面渲染时按需预加载）

@@ -5,6 +5,8 @@ import { renderMarkdownTree } from "./markdown";
 import { loadAllFonts, loadFontData, SATORI_FONT_NAMES } from "./fonts";
 import satori from "satori";
 
+import { hexToRgba } from "./typography";
+
 export interface PosterProps {
   markdown: string;
   theme: ThemeTokens;
@@ -38,37 +40,117 @@ export function buildPosterTree(props: PosterProps, height?: number): React.Reac
       style={{
         display: "flex",
         alignItems: "center",
-        marginBottom: 40,
+        justifyContent: "space-between",
+        marginBottom: 36,
         width: "100%",
       }}
     >
-      {brand.logo ? (
-        <img src={brand.logo} style={{ height: 56, width: "auto", maxWidth: 240, objectFit: "contain" }} />
-      ) : (
-        <div style={{ width: 56, height: 56, borderRadius: 14, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ color: "#fff", fontSize: 28, fontWeight: 700, fontFamily: `"${s.fontHeading}"` }}>文</span>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        {brand.logo ? (
+          <img src={brand.logo} style={{ height: 52, width: "auto", maxWidth: 220, objectFit: "contain" }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: s.isDark && accent === "#ffe600" ? "#0f1013" : "#fff", fontSize: 24, fontWeight: 700, fontFamily: `"${s.fontHeading}"` }}>文</span>
+          </div>
+        )}
+      </div>
+
+      {(brand.headerTag || brand.showDate) ? (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {brand.headerTag ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "4px 14px",
+                borderRadius: 20,
+                fontSize: 16,
+                fontWeight: 700,
+                color: accent,
+                backgroundColor: hexToRgba(accent, s.isDark ? 0.2 : 0.1),
+                fontFamily: `"${s.fontHeading}"`,
+                letterSpacing: 0.5,
+              }}
+            >
+              {brand.headerTag}
+            </div>
+          ) : null}
+          {brand.showDate ? (
+            <div
+              style={{
+                marginLeft: brand.headerTag ? 12 : 0,
+                fontSize: 16,
+                color: s.footerColor,
+                fontFamily: `"${s.fontMono}"`,
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
+            >
+              {new Date().toISOString().slice(0, 10).replace(/-/g, ".")}
+            </div>
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   ) : null;
 
   const footer = (
     <div style={{ display: "flex", flexDirection: "column", width: "100%", marginTop: 40 }}>
-      <div style={{ width: 56, height: 4, borderRadius: 2, backgroundColor: accent }} />
-      {brand.footerText ? (
+      <div
+        style={{
+          width: "100%",
+          height: 1,
+          backgroundColor: hexToRgba(s.hr, s.isDark ? 0.6 : 0.9),
+          marginBottom: 16,
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: accent, marginRight: 10 }} />
+          {brand.footerText ? (
+            <div
+              style={{
+                fontSize: s.fontSize.small,
+                color: s.footerColor,
+                fontFamily: `"${s.fontBody}"`,
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
+            >
+              {brand.footerText}
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: s.fontSize.small - 2,
+                color: s.footerColor,
+                fontFamily: `"${s.fontMono}"`,
+                opacity: 0.7,
+              }}
+            >
+              md2img
+            </div>
+          )}
+        </div>
+
         <div
           style={{
-            marginTop: 14,
-            fontSize: s.fontSize.small,
+            fontSize: s.fontSize.small - 2,
             color: s.footerColor,
-            fontFamily: `"${s.fontBody}"`,
-            fontWeight: 700,
-            letterSpacing: 1,
+            fontFamily: `"${s.fontMono}"`,
+            opacity: 0.6,
           }}
         >
-          {brand.footerText}
+          {size.name}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 
@@ -81,6 +163,7 @@ export function buildPosterTree(props: PosterProps, height?: number): React.Reac
         ...(height !== undefined ? { height } : { minHeight: size.minHeight }),
         backgroundColor: s.background,
         ...(s.backgroundImage ? { backgroundImage: s.backgroundImage } : {}),
+        ...(s.border ? { border: s.border } : {}),
         padding: s.padding,
         boxSizing: "border-box",
         position: "relative",
@@ -166,6 +249,7 @@ async function ensureBrowserFontsLoaded(): Promise<void> {
     '"JetBrains Mono"',
     '"Inter"',
     '"Playfair Display"',
+    '"Fusion Pixel"',
   ];
   try {
     await Promise.all(families.map((f) => document.fonts.load(`16px ${f}`)));
