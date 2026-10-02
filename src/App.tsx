@@ -111,8 +111,8 @@ export default function App() {
   const handleLogo = useCallback(
     async (file: File) => {
       try {
-        const logo = await compressLogo(file);
-        const next = { ...brand, logo };
+        const { dataUrl, width, height } = await compressLogo(file);
+        const next = { ...brand, logo: dataUrl, logoWidth: width, logoHeight: height, showLogo: true };
         setBrand(next);
         saveBrand(next);
       } catch (e) {

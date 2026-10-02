@@ -79,9 +79,11 @@ export interface PosterSize {
 
 export interface BrandSettings {
   logo?: string; // dataURL
+  logoWidth?: number;
+  logoHeight?: number;
   accentColor: string;
   footerText: string;
-  /** 是否在卡片顶部显示图标（Logo 或默认占位） */
+  /** 是否在卡片顶部显示图标（Logo） */
   showLogo: boolean;
   /** 可选：顶部右侧分类/标签（如 "TECH NOTES"） */
   headerTag?: string;

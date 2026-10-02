@@ -74,32 +74,84 @@ function renderInline(children: Token[], ctx: RenderCtx, keyPrefix: string): Rea
         break;
       case "image": {
         const src = tok.attrGet("src") ?? "";
+        const alt = tok.content || tok.attrGet("alt") || "";
         // 等比缩放：卡片内容宽为上限，居中显示
         const contentW = ctx.contentWidth ?? Math.max(200, 1080 - s.padding * 2);
         const dim = ctx.imageSizes?.get(src);
         let imgW = contentW;
-        let imgH: number | undefined;
+        let imgH = Math.round(contentW * 0.5625); // 默认 16:9 保底
         if (dim && Number.isFinite(dim.w) && dim.w > 0 && Number.isFinite(dim.h) && dim.h > 0) {
           imgW = Math.min(contentW, dim.w);
           imgH = Math.round((imgW / dim.w) * dim.h);
         }
+
+        // 若远程图片预取与代理均失败（仍以 http 开头且无尺寸），在浏览器端无法由 Satori 渲染
+        // 显示优雅的降级占位块，避免整张卡片抛出异常崩溃
+        const isRemoteFailed = (src.startsWith("http://") || src.startsWith("https://")) && !dim;
+        if (isRemoteFailed) {
+          out.push(
+            <div
+              key={key}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                padding: "24px 16px",
+                marginBottom: 20,
+                borderRadius: 12,
+                border: `1px dashed ${s.border || s.hr}`,
+                backgroundColor: s.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)",
+              }}
+            >
+              <div style={{ fontSize: s.fontSize.small, color: s.footerColor, fontFamily: `"${s.fontBody}"` }}>
+                🖼️ {alt || "远程图片加载失败（可能受跨域策略拦截，建议直接粘贴或上传本地图片）"}
+              </div>
+            </div>
+          );
+          break;
+        }
+
         out.push(
           <div
             key={key}
-            style={{ display: "flex", justifyContent: "center", marginBottom: 20, width: "100%" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              marginBottom: 20,
+              width: "100%",
+            }}
           >
             <img
               src={src}
-              alt={tok.content}
+              alt={alt}
               width={imgW}
-              height={imgH ?? imgW}
+              height={imgH}
               style={{
                 width: imgW,
-                height: imgH ?? "auto",
+                height: imgH,
                 borderRadius: 10,
-                objectFit: "cover",
+                objectFit: "contain",
               }}
             />
+            {alt ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  marginTop: 8,
+                  fontSize: s.fontSize.small - 2,
+                  color: s.footerColor,
+                  fontFamily: `"${s.fontBody}"`,
+                  opacity: 0.8,
+                }}
+              >
+                {alt}
+              </div>
+            ) : null}
           </div>
         );
         break;

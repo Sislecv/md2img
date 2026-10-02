@@ -35,7 +35,30 @@ export function buildPosterTree(props: PosterProps, height?: number): React.Reac
     </div>
   );
 
-  const header = s.showBrandHeader && brand.showLogo ? (
+  const hasLogo = Boolean(brand.showLogo && brand.logo);
+  const showHeader = s.showBrandHeader && (hasLogo || brand.headerTag || brand.showDate);
+
+  let logoElement: React.ReactNode = null;
+  if (hasLogo && brand.logo) {
+    const naturalW = brand.logoWidth || 200;
+    const naturalH = brand.logoHeight || 52;
+    const targetH = 48;
+    const targetW = Math.max(1, Math.min(220, Math.round((targetH / naturalH) * naturalW)));
+    logoElement = (
+      <img
+        src={brand.logo}
+        width={targetW}
+        height={targetH}
+        style={{
+          width: targetW,
+          height: targetH,
+          objectFit: "contain",
+        }}
+      />
+    );
+  }
+
+  const header = showHeader ? (
     <div
       style={{
         display: "flex",
@@ -46,13 +69,7 @@ export function buildPosterTree(props: PosterProps, height?: number): React.Reac
       }}
     >
       <div style={{ display: "flex", alignItems: "center" }}>
-        {brand.logo ? (
-          <img src={brand.logo} style={{ height: 52, width: "auto", maxWidth: 220, objectFit: "contain" }} />
-        ) : (
-          <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: s.isDark && accent === "#ffe600" ? "#0f1013" : "#fff", fontSize: 24, fontWeight: 700, fontFamily: `"${s.fontHeading}"` }}>文</span>
-          </div>
-        )}
+        {logoElement}
       </div>
 
       {(brand.headerTag || brand.showDate) ? (
@@ -138,17 +155,6 @@ export function buildPosterTree(props: PosterProps, height?: number): React.Reac
               md2img
             </div>
           )}
-        </div>
-
-        <div
-          style={{
-            fontSize: s.fontSize.small - 2,
-            color: s.footerColor,
-            fontFamily: `"${s.fontMono}"`,
-            opacity: 0.6,
-          }}
-        >
-          {size.name}
         </div>
       </div>
     </div>
@@ -260,9 +266,9 @@ async function ensureBrowserFontsLoaded(): Promise<void> {
 }
 
 // ---------- Markdown 图片预取 ----------
-const IMG_URL_RE = /(!\[[^\]]*\]\(\s*)(https?:\/\/[^)\s]+)(\s*\))/g;
+const IMG_MD_RE = /!\[([^\]]*)\]\(\s*([^\s)]+)\s*\)/g;
 // 言论卡片头像（`> ![..]`）：压缩到小尺寸，避免巨型 path 干扰后续布局
-const AVATAR_URL_RE = /(>\s*!\[[^\]]*\]\(\s*)(https?:\/\/[^)\s]+)(\s*\))/g;
+const AVATAR_MD_RE = />\s*!\[([^\]]*)\]\(\s*([^\s)]+)\s*\)/g;
 
 export interface PrefetchedImages {
   /** 预取后的 markdown（远程 URL 替换为 data URL） */
@@ -271,14 +277,13 @@ export interface PrefetchedImages {
   sizes: Map<string, { w: number; h: number }>;
 }
 
-/** 扫描 markdown 中所有远程图片 URL，fetch 为 data URL、压缩尺寸并读取原始尺寸。
- *  satori 无法加载远程图片且需要显式宽高；过大图片会被 satori 转成巨型 path，
- *  干扰后续元素布局（导致段落爆炸/溢出），故预取时按用途压缩：
- *  言论卡片头像缩到 96px（渲染 44px），普通图片缩到 800px。 */
-const MAX_BODY_W = 800;
+/** 扫描 markdown 中所有图片 URL（远程或 data URL），fetch 转为 data URL、压缩尺寸并探测实际宽高。
+ *  satori 无法在浏览器安全沙箱内加载远程跨域图片，且需要显式宽高属性避免排版塌陷。
+ *  言论卡片头像缩到 96px（渲染 44px），普通正文图片缩到 1000px，输出 PNG 格式保证完全兼容。 */
+const MAX_BODY_W = 1000;
 const MAX_AVATAR_W = 96;
 
-async function compressToDataUrl(blob: Blob, maxW: number): Promise<string> {
+async function compressBlobToPng(blob: Blob, maxW: number): Promise<{ dataUrl: string; w: number; h: number }> {
   const raw = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
@@ -291,48 +296,79 @@ async function compressToDataUrl(blob: Blob, maxW: number): Promise<string> {
     img.onerror = () => reject(new Error("decode fail"));
     img.src = raw;
   });
-  const w = img.naturalWidth || maxW;
-  const h = img.naturalHeight || maxW;
-  const scale = Math.min(1, maxW / Math.max(1, w));
+  const naturalW = img.naturalWidth || maxW;
+  const naturalH = img.naturalHeight || maxW;
+  const scale = Math.min(1, maxW / Math.max(1, naturalW));
+  const targetW = Math.max(1, Math.round(naturalW * scale));
+  const targetH = Math.max(1, Math.round(naturalH * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(w * scale));
-  canvas.height = Math.max(1, Math.round(h * scale));
+  canvas.width = targetW;
+  canvas.height = targetH;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return raw;
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.85);
+  if (!ctx) return { dataUrl: raw, w: naturalW, h: naturalH };
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+  // 使用 PNG 格式，Satori 完美支持且不破坏透明背景
+  return {
+    dataUrl: canvas.toDataURL("image/png"),
+    w: naturalW,
+    h: naturalH,
+  };
 }
 
 export async function prefetchImages(markdown: string): Promise<PrefetchedImages> {
-  const urls = [...markdown.matchAll(IMG_URL_RE)].map((m) => m[2]);
-  const avatarUrls = new Set([...markdown.matchAll(AVATAR_URL_RE)].map((m) => m[2]));
+  const urls = [...markdown.matchAll(IMG_MD_RE)].map((m) => m[2]);
+  const avatarUrls = new Set([...markdown.matchAll(AVATAR_MD_RE)].map((m) => m[2]));
   const uniq = [...new Set(urls)];
   const sizes = new Map<string, { w: number; h: number }>();
   if (uniq.length === 0) return { markdown, sizes };
 
   const resolved = await Promise.all(
     uniq.map(async (url) => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return { url, data: url };
-        const blob = await res.blob();
-        const maxW = avatarUrls.has(url) ? MAX_AVATAR_W : MAX_BODY_W;
-        const data = await compressToDataUrl(blob, maxW);
-        // 读取压缩后图片的原始尺寸
+      // 1. 如果已经是 data URL，只需探测自然尺寸
+      if (url.startsWith("data:image/")) {
         try {
           const dim = await new Promise<{ w: number; h: number }>((resolve, reject) => {
             const img = new Image();
             img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
             img.onerror = () => reject(new Error("dim fail"));
-            img.src = data;
+            img.src = url;
           });
           sizes.set(url, dim);
         } catch {
-          /* 尺寸探测失败不影响使用 */
+          /* 探测失败静默 */
         }
-        return { url, data };
+        return { url, data: url };
+      }
+
+      // 2. 远程 HTTP/HTTPS 图片：先尝试直接抓取，若遇 CORS 限制则通过公开反向代理降级
+      try {
+        let blob: Blob | null = null;
+        try {
+          const res = await fetch(url, { mode: "cors" });
+          if (res.ok) blob = await res.blob();
+        } catch {
+          /* 直接 fetch 跨域失败 */
+        }
+
+        if (!blob) {
+          try {
+            const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=png`;
+            const proxyRes = await fetch(proxyUrl);
+            if (proxyRes.ok) blob = await proxyRes.blob();
+          } catch {
+            /* 代理失败 */
+          }
+        }
+
+        if (!blob) return { url, data: url };
+
+        const maxW = avatarUrls.has(url) ? MAX_AVATAR_W : MAX_BODY_W;
+        const { dataUrl, w, h } = await compressBlobToPng(blob, maxW);
+        sizes.set(url, { w, h });
+        sizes.set(dataUrl, { w, h });
+        return { url, data: dataUrl };
       } catch {
-        return { url, data: url }; // 网络失败保留原文，satori 会跳过该图
+        return { url, data: url };
       }
     })
   );
@@ -340,8 +376,7 @@ export async function prefetchImages(markdown: string): Promise<PrefetchedImages
   let out = markdown;
   resolved.forEach(({ url, data }) => {
     if (data !== url) {
-      out = out.replace(url, data);
-      // 同时记录 data URL → 尺寸（渲染时 src 已被替换为 data URL）
+      out = out.split(url).join(data);
       const dim = sizes.get(url);
       if (dim) sizes.set(data, dim);
     }

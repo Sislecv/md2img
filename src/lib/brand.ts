@@ -39,7 +39,7 @@ function readWithLegacy(key: string): string | null {
 export const DEFAULT_BRAND: BrandSettings = {
   accentColor: "",
   footerText: "",
-  showLogo: true,
+  showLogo: false,
   headerTag: "",
   showDate: false,
 };
@@ -55,7 +55,9 @@ export function loadBrand(): BrandSettings {
       accentColor: typeof parsed.accentColor === "string" ? parsed.accentColor : "",
       footerText: typeof parsed.footerText === "string" ? parsed.footerText : "",
       logo: typeof parsed.logo === "string" ? parsed.logo : undefined,
-      showLogo: parsed.showLogo !== false,
+      logoWidth: typeof parsed.logoWidth === "number" ? parsed.logoWidth : undefined,
+      logoHeight: typeof parsed.logoHeight === "number" ? parsed.logoHeight : undefined,
+      showLogo: parsed.showLogo === true,
       headerTag: typeof parsed.headerTag === "string" ? parsed.headerTag : "",
       showDate: Boolean(parsed.showDate),
     };
@@ -179,8 +181,14 @@ export function clearStoredState(): void {
   }
 }
 
-/** Logo 上传压缩：限制最大边 ≤ 400px，JPEG/WebP 质量 0.85，控制 localStorage 体积 */
-export function compressLogo(file: File, maxSize = 400): Promise<string> {
+export interface CompressedImageResult {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+/** 通用图片压缩：限制最大边 ≤ maxDim，返回 Satori 兼容的 PNG data URL 及其实际像素宽高 */
+export function compressImageFile(file: File, maxDim = 1200): Promise<CompressedImageResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("读取图片失败"));
@@ -188,20 +196,29 @@ export function compressLogo(file: File, maxSize = 400): Promise<string> {
       const img = new Image();
       img.onerror = () => reject(new Error("图片解码失败"));
       img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           reject(new Error("无法创建 canvas"));
           return;
         }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/webp", 0.85));
+        ctx.drawImage(img, 0, 0, w, h);
+        // Satori 原生支持 PNG（完美保留透明度，绝不使用 WebP）
+        const dataUrl = canvas.toDataURL("image/png");
+        resolve({ dataUrl, width: w, height: h });
       };
       img.src = String(reader.result);
     };
     reader.readAsDataURL(file);
   });
+}
+
+/** Logo 上传压缩：限制最大边 ≤ 400px，输出 PNG 确保 Satori 兼容 */
+export function compressLogo(file: File, maxSize = 400): Promise<CompressedImageResult> {
+  return compressImageFile(file, maxSize);
 }

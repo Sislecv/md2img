@@ -70,7 +70,7 @@ export default function BrandDrawer({ open, onClose, brand, onChange, onLogo }: 
               </button>
               {brand.logo && (
                 <button
-                  onClick={() => onChange({ logo: undefined })}
+                  onClick={() => onChange({ logo: undefined, logoWidth: undefined, logoHeight: undefined })}
                   className="rounded-md px-3 py-1 text-xs text-red-500 hover:bg-red-50"
                 >
                   移除
